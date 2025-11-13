@@ -16,6 +16,9 @@ import {
   Bar,
   LineChart,
   Line,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -39,6 +42,8 @@ export default function Dashboard() {
   });
 
   const [cashFlowData, setCashFlowData] = useState<any[]>([]);
+  const [projectDistribution, setProjectDistribution] = useState<any[]>([]);
+  const [expenseDistribution, setExpenseDistribution] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -113,7 +118,29 @@ export default function Dashboard() {
         Lucro: data.receitas - data.fornecedor - data.imposto,
       }));
 
+      // Project distribution by status
+      const projectsByStatus = [
+        { name: "Planejamento", value: projects?.filter(p => p.status === "planejamento").length || 0, color: "#f59e0b" },
+        { name: "Em Andamento", value: projects?.filter(p => p.status === "em_andamento").length || 0, color: "#3b82f6" },
+        { name: "Concluída", value: projects?.filter(p => p.status === "concluida").length || 0, color: "#10b981" },
+      ].filter(item => item.value > 0);
+
+      // Expense distribution by supplier
+      const supplierExpenses: { [key: string]: number } = {};
+      yearTransactions?.forEach(t => {
+        if (t.type === "despesa" && t.category === "fornecedor" && t.status === "pago") {
+          supplierExpenses[t.description] = (supplierExpenses[t.description] || 0) + Number(t.amount);
+        }
+      });
+
+      const expensesBySupplier = Object.entries(supplierExpenses)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 8); // Top 8 suppliers
+
       setCashFlowData(chartData);
+      setProjectDistribution(projectsByStatus);
+      setExpenseDistribution(expensesBySupplier);
       setStats({ activeProjects, completedProjects, monthlyProfit });
     } catch (error) {
       console.error("Erro ao carregar dashboard:", error);
@@ -229,6 +256,86 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
+
+        {/* Donut Charts */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Project Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Distribuição de Obras por Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {projectDistribution.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={projectDistribution}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={(entry) => `${entry.name}: ${entry.value}`}
+                    >
+                      {projectDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-center text-muted-foreground py-12">
+                  Nenhuma obra cadastrada
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Expense Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Despesas por Fornecedor</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {expenseDistribution.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={expenseDistribution}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={(entry) => entry.name}
+                    >
+                      {expenseDistribution.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={`hsl(${(index * 360) / expenseDistribution.length}, 70%, 50%)`}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: number) =>
+                        `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+                      }
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-center text-muted-foreground py-12">
+                  Nenhuma despesa paga
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </Layout>
   );

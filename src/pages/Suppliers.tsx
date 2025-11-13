@@ -38,6 +38,9 @@ export default function Suppliers() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedState, setSelectedState] = useState("all");
+  const [selectedRede, setSelectedRede] = useState("all");
+  const [selectedBairro, setSelectedBairro] = useState("all");
+  const [selectedMunicipio, setSelectedMunicipio] = useState("all");
 
   useEffect(() => {
     loadSuppliers();
@@ -45,7 +48,7 @@ export default function Suppliers() {
 
   useEffect(() => {
     filterSuppliers();
-  }, [searchTerm, selectedState, suppliers]);
+  }, [searchTerm, selectedState, selectedRede, selectedBairro, selectedMunicipio, suppliers]);
 
   const loadSuppliers = async () => {
     try {
@@ -90,15 +93,26 @@ export default function Suppliers() {
     if (selectedState !== "all") {
       filtered = filtered.filter((s) => s.UF === selectedState);
     }
+    
+    if (selectedRede !== "all") {
+      filtered = filtered.filter((s) => s.Rede === selectedRede);
+    }
+    
+    if (selectedBairro !== "all") {
+      filtered = filtered.filter((s) => s.Bairro === selectedBairro);
+    }
+    
+    if (selectedMunicipio !== "all") {
+      filtered = filtered.filter((s) => s.Municipios === selectedMunicipio);
+    }
 
     setFilteredSuppliers(filtered);
   };
 
-  const downloadPDF = () => {
-    toast.info("Funcionalidade de exportação em desenvolvimento");
-  };
-
-  const states = Array.from(new Set(suppliers.map((s) => s.UF))).sort();
+  const states = Array.from(new Set(suppliers.map((s) => s.UF).filter(Boolean))).sort();
+  const redes = Array.from(new Set(suppliers.map((s) => s.Rede).filter(Boolean))).sort();
+  const bairros = Array.from(new Set(suppliers.map((s) => s.Bairro).filter(Boolean))).sort();
+  const municipios = Array.from(new Set(suppliers.map((s) => s.Municipios).filter(Boolean))).sort();
 
   return (
     <Layout>
@@ -110,11 +124,6 @@ export default function Suppliers() {
               Lista completa de fornecedores de materiais
             </p>
           </div>
-
-          <Button onClick={downloadPDF} className="gap-2">
-            <Download className="h-4 w-4" />
-            Baixar PDF
-          </Button>
         </div>
 
         {/* Filters */}
@@ -133,9 +142,51 @@ export default function Suppliers() {
                 </div>
               </div>
 
+              <Select value={selectedRede} onValueChange={setSelectedRede}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Rede" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Redes</SelectItem>
+                  {redes.map((rede) => (
+                    <SelectItem key={rede} value={rede}>
+                      {rede}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedBairro} onValueChange={setSelectedBairro}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Bairro" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Bairros</SelectItem>
+                  {bairros.map((bairro) => (
+                    <SelectItem key={bairro} value={bairro}>
+                      {bairro}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedMunicipio} onValueChange={setSelectedMunicipio}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Município" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Municípios</SelectItem>
+                  {municipios.map((municipio) => (
+                    <SelectItem key={municipio} value={municipio}>
+                      {municipio}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Select value={selectedState} onValueChange={setSelectedState}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Todos os Estados" />
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="UF" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os Estados</SelectItem>
