@@ -1,0 +1,8 @@
+[build]
+  # Define a pasta onde o Netlify deve buscar os arquivos finais
+  publish = "dist" 
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
