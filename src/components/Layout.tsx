@@ -9,6 +9,7 @@ import {
   Store,
   Users,
   LogOut,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,7 @@ export function Layout({ children }: LayoutProps) {
     { name: "Financeiro", href: "/financeiro", icon: DollarSign },
     { name: "Madeireiras", href: "/madeireiras", icon: Store },
     { name: "Cadastro", href: "/cadastro", icon: Users },
+    { name: "Perfil", href: "/perfil", icon: User },
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
   ];
 

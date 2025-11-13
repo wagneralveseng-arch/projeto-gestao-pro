@@ -47,10 +47,12 @@ export default function Projects() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    address: "",
     start_date: "",
     expected_end_date: "",
     status: "planejamento",
@@ -90,37 +92,73 @@ export default function Projects() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (editingProject) {
-      const { error } = await supabase
-        .from("projects")
-        .update(formData)
-        .eq("id", editingProject.id);
+    try {
+      let uploadedPhotoUrls: string[] = [...photoUrls];
 
-      if (error) {
-        toast.error("Erro ao atualizar obra");
-      } else {
+      // Upload new photos
+      if (photos.length > 0) {
+        for (const photo of photos) {
+          const fileExt = photo.name.split(".").pop();
+          const fileName = `${user?.id}-${Date.now()}-${Math.random()}.${fileExt}`;
+          
+          const { data, error: uploadError } = await supabase.storage
+            .from("project-photos")
+            .upload(`projects/${fileName}`, photo);
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from("project-photos")
+            .getPublicUrl(`projects/${fileName}`);
+
+          uploadedPhotoUrls.push(publicUrl);
+        }
+      }
+
+      // Get address from selected customer
+      const selectedCustomer = customers.find(c => c.id === formData.customer_id);
+      const address = selectedCustomer 
+        ? `${selectedCustomer.address || ''}, ${selectedCustomer.city || ''} - ${selectedCustomer.state || ''}`
+        : '';
+
+      if (editingProject) {
+        const { error } = await supabase
+          .from("projects")
+          .update({
+            ...formData,
+            address,
+            photo_urls: uploadedPhotoUrls,
+          })
+          .eq("id", editingProject.id);
+
+        if (error) throw error;
         toast.success("Obra atualizada com sucesso!");
-        loadProjects();
-        resetForm();
-      }
-    } else {
-      const { error } = await supabase
-        .from("projects")
-        .insert([{ ...formData, user_id: user?.id }]);
-
-      if (error) {
-        toast.error("Erro ao criar obra");
       } else {
+        const { error } = await supabase
+          .from("projects")
+          .insert([{ 
+            ...formData, 
+            address,
+            photo_urls: uploadedPhotoUrls,
+            user_id: user?.id 
+          }]);
+
+        if (error) throw error;
         toast.success("Obra criada com sucesso!");
-        loadProjects();
-        resetForm();
       }
+
+      loadProjects();
+      resetForm();
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao salvar obra");
     }
   };
 
   const handleEdit = (project: Project) => {
     setEditingProject(project);
-    setFormData(project);
+    const { address, ...restData } = project;
+    setFormData(restData);
+    setPhotoUrls((project as any).photo_urls || []);
     setDialogOpen(true);
   };
 
@@ -141,14 +179,24 @@ export default function Projects() {
     setFormData({
       name: "",
       description: "",
-      address: "",
       start_date: "",
       expected_end_date: "",
       status: "planejamento",
       customer_id: "",
     });
+    setPhotos([]);
+    setPhotoUrls([]);
     setEditingProject(null);
     setDialogOpen(false);
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (photos.length + files.length > 5) {
+      toast.error("Máximo de 5 fotos permitido");
+      return;
+    }
+    setPhotos([...photos, ...files]);
   };
 
   const getStatusColor = (status: string) => {
@@ -242,15 +290,6 @@ export default function Projects() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="address">Endereço</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  />
-                </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="start_date">Data de Início</Label>
@@ -304,6 +343,22 @@ export default function Projects() {
                     }
                     rows={4}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="photos">Fotos da Obra (máximo 5)</Label>
+                  <Input
+                    id="photos"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handlePhotoChange}
+                  />
+                  {(photos.length > 0 || photoUrls.length > 0) && (
+                    <p className="text-sm text-muted-foreground">
+                      {photos.length + photoUrls.length} foto(s) selecionada(s)
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-2">

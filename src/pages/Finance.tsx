@@ -44,6 +44,8 @@ interface Transaction {
   installments: number;
   installment_terms: string;
   due_date: string;
+  due_date_2?: string;
+  due_date_3?: string;
   paid_date: string;
   status: string;
   notes: string;
@@ -68,6 +70,8 @@ export default function Finance() {
     installments: 1,
     installment_terms: "",
     due_date: "",
+    due_date_2: "",
+    due_date_3: "",
     paid_date: "",
     status: "pendente",
     notes: "",
@@ -140,7 +144,11 @@ export default function Finance() {
 
   const handleEdit = (transaction: Transaction) => {
     setEditingTransaction(transaction);
-    setFormData(transaction);
+    setFormData({
+      ...transaction,
+      due_date_2: transaction.due_date_2 || "",
+      due_date_3: transaction.due_date_3 || "",
+    });
     setDialogOpen(true);
   };
 
@@ -167,12 +175,29 @@ export default function Finance() {
       installments: 1,
       installment_terms: "",
       due_date: "",
+      due_date_2: "",
+      due_date_3: "",
       paid_date: "",
       status: "pendente",
       notes: "",
     });
     setEditingTransaction(null);
     setDialogOpen(false);
+  };
+
+  const toggleStatus = async (transaction: Transaction) => {
+    const newStatus = transaction.status === "pago" ? "pendente" : "pago";
+    const { error } = await supabase
+      .from("transactions")
+      .update({ status: newStatus })
+      .eq("id", transaction.id);
+
+    if (error) {
+      toast.error("Erro ao atualizar status");
+    } else {
+      toast.success(`Status alterado para ${newStatus}`);
+      loadTransactions();
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -332,51 +357,80 @@ export default function Finance() {
                 )}
 
                 {formData.payment_method === "faturado" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="installment_terms">Prazo de Faturamento</Label>
-                    <Select
-                      value={formData.installment_terms}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, installment_terms: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="30">30 dias</SelectItem>
-                        <SelectItem value="30,60">30, 60 dias</SelectItem>
-                        <SelectItem value="30,60,90">30, 60, 90 dias</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="installment_terms">Prazo de Faturamento</Label>
+                      <Select
+                        value={formData.installment_terms}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, installment_terms: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="30">30 dias</SelectItem>
+                          <SelectItem value="30,60">30, 60 dias</SelectItem>
+                          <SelectItem value="30,60,90">30, 60, 90 dias</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {formData.installment_terms === "30,60" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="due_date_2">Data de Vencimento 2 (60 dias)</Label>
+                        <Input
+                          id="due_date_2"
+                          type="date"
+                          value={formData.due_date_2}
+                          onChange={(e) =>
+                            setFormData({ ...formData, due_date_2: e.target.value })
+                          }
+                        />
+                      </div>
+                    )}
+                    
+                    {formData.installment_terms === "30,60,90" && (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="due_date_2">Data de Vencimento 2 (60 dias)</Label>
+                          <Input
+                            id="due_date_2"
+                            type="date"
+                            value={formData.due_date_2}
+                            onChange={(e) =>
+                              setFormData({ ...formData, due_date_2: e.target.value })
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="due_date_3">Data de Vencimento 3 (90 dias)</Label>
+                          <Input
+                            id="due_date_3"
+                            type="date"
+                            value={formData.due_date_3}
+                            onChange={(e) =>
+                              setFormData({ ...formData, due_date_3: e.target.value })
+                            }
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="due_date">Data de Vencimento *</Label>
-                    <Input
-                      id="due_date"
-                      type="date"
-                      value={formData.due_date}
-                      onChange={(e) =>
-                        setFormData({ ...formData, due_date: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="paid_date">Data de Pagamento</Label>
-                    <Input
-                      id="paid_date"
-                      type="date"
-                      value={formData.paid_date}
-                      onChange={(e) =>
-                        setFormData({ ...formData, paid_date: e.target.value })
-                      }
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="due_date">Data de Vencimento *</Label>
+                  <Input
+                    id="due_date"
+                    type="date"
+                    value={formData.due_date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, due_date: e.target.value })
+                    }
+                    required
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -524,7 +578,10 @@ export default function Finance() {
                           {format(new Date(transaction.due_date), "dd/MM/yyyy")}
                         </TableCell>
                         <TableCell>
-                          <Badge className={getStatusColor(transaction.status)}>
+                          <Badge 
+                            className={`${getStatusColor(transaction.status)} cursor-pointer`}
+                            onClick={() => toggleStatus(transaction)}
+                          >
                             {transaction.status}
                           </Badge>
                         </TableCell>
