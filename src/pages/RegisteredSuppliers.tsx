@@ -22,10 +22,10 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, Edit, Trash2, User, Mail, Phone, MapPin } from "lucide-react";
+import { Plus, Edit, Trash2, Building2, Mail, Phone, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
-interface Customer {
+interface Supplier {
   id: string;
   name: string;
   email: string;
@@ -38,12 +38,12 @@ interface Customer {
   notes: string;
 }
 
-export default function Customers() {
+export default function RegisteredSuppliers() {
   const { user } = useAuth();
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -59,20 +59,20 @@ export default function Customers() {
 
   useEffect(() => {
     if (user) {
-      loadCustomers();
+      loadSuppliers();
     }
   }, [user]);
 
-  const loadCustomers = async () => {
+  const loadSuppliers = async () => {
     if (!user) return;
     const { data, error } = await supabase
-      .from("customers")
+      .from("suppliers")
       .select("*")
       .eq("user_id", user.id)
       .order("name", { ascending: true });
 
     if (!error && data) {
-      setCustomers(data);
+      setSuppliers(data);
     }
     setLoading(false);
   };
@@ -104,50 +104,50 @@ export default function Customers() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (editingCustomer) {
+    if (editingSupplier) {
       const { error } = await supabase
-        .from("customers")
+        .from("suppliers")
         .update(formData)
-        .eq("id", editingCustomer.id);
+        .eq("id", editingSupplier.id);
 
       if (error) {
-        toast.error("Erro ao atualizar cliente");
+        toast.error("Erro ao atualizar fornecedor");
       } else {
-        toast.success("Cliente atualizado com sucesso!");
-        loadCustomers();
+        toast.success("Fornecedor atualizado com sucesso!");
+        loadSuppliers();
         resetForm();
       }
     } else {
       const { error } = await supabase
-        .from("customers")
+        .from("suppliers")
         .insert([{ ...formData, user_id: user?.id }]);
 
       if (error) {
-        toast.error("Erro ao cadastrar cliente");
+        toast.error("Erro ao cadastrar fornecedor");
       } else {
-        toast.success("Cliente cadastrado com sucesso!");
-        loadCustomers();
+        toast.success("Fornecedor cadastrado com sucesso!");
+        loadSuppliers();
         resetForm();
       }
     }
   };
 
-  const handleEdit = (customer: Customer) => {
-    setEditingCustomer(customer);
-    setFormData(customer);
+  const handleEdit = (supplier: Supplier) => {
+    setEditingSupplier(supplier);
+    setFormData(supplier);
     setDialogOpen(true);
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este cliente?")) return;
+    if (!confirm("Tem certeza que deseja excluir este fornecedor?")) return;
 
-    const { error } = await supabase.from("customers").delete().eq("id", id);
+    const { error } = await supabase.from("suppliers").delete().eq("id", id);
 
     if (error) {
-      toast.error("Erro ao excluir cliente");
+      toast.error("Erro ao excluir fornecedor");
     } else {
-      toast.success("Cliente excluído com sucesso!");
-      loadCustomers();
+      toast.success("Fornecedor excluído com sucesso!");
+      loadSuppliers();
     }
   };
 
@@ -163,7 +163,7 @@ export default function Customers() {
       zip_code: "",
       notes: "",
     });
-    setEditingCustomer(null);
+    setEditingSupplier(null);
     setDialogOpen(false);
   };
 
@@ -172,26 +172,26 @@ export default function Customers() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Cadastro de Clientes</h1>
-            <p className="text-muted-foreground">Gerencie seus clientes e contatos</p>
+            <h1 className="text-3xl font-bold text-foreground">Fornecedores</h1>
+            <p className="text-muted-foreground">Gerencie seus fornecedores cadastrados</p>
           </div>
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={resetForm} className="gap-2">
                 <Plus className="h-4 w-4" />
-                Novo Cliente
+                Novo Fornecedor
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
-                  {editingCustomer ? "Editar Cliente" : "Novo Cliente"}
+                  {editingSupplier ? "Editar Fornecedor" : "Novo Fornecedor"}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nome Completo *</Label>
+                  <Label htmlFor="name">Nome / Razão Social *</Label>
                   <Input
                     id="name"
                     value={formData.name}
@@ -202,7 +202,7 @@ export default function Customers() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">E-mail</Label>
                     <Input
                       id="email"
                       type="email"
@@ -217,13 +217,12 @@ export default function Customers() {
                       id="phone"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="(00) 00000-0000"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="cpf_cnpj">CPF/CNPJ</Label>
+                  <Label htmlFor="cpf_cnpj">CPF / CNPJ</Label>
                   <Input
                     id="cpf_cnpj"
                     value={formData.cpf_cnpj}
@@ -251,8 +250,8 @@ export default function Customers() {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2 col-span-2">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
                     <Label htmlFor="city">Cidade</Label>
                     <Input
                       id="city"
@@ -262,25 +261,14 @@ export default function Customers() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="state">UF</Label>
+                    <Label htmlFor="state">Estado</Label>
                     <Input
                       id="state"
                       value={formData.state}
                       onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                       maxLength={2}
-                      placeholder="SP"
                     />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="zip_code">CEP</Label>
-                  <Input
-                    id="zip_code"
-                    value={formData.zip_code}
-                    onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
-                    placeholder="00000-000"
-                  />
                 </div>
 
                 <div className="space-y-2">
@@ -298,7 +286,7 @@ export default function Customers() {
                     Cancelar
                   </Button>
                   <Button type="submit">
-                    {editingCustomer ? "Atualizar" : "Cadastrar"}
+                    {editingSupplier ? "Atualizar" : "Cadastrar"}
                   </Button>
                 </div>
               </form>
@@ -310,85 +298,93 @@ export default function Customers() {
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
-        ) : customers.length === 0 ? (
+        ) : suppliers.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <User className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-4">Nenhum cliente cadastrado ainda.</p>
-              <Button onClick={() => setDialogOpen(true)}>
-                Cadastrar primeiro cliente
+              <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Nenhum fornecedor cadastrado ainda.</p>
+              <Button onClick={() => setDialogOpen(true)} className="mt-4">
+                Cadastrar primeiro fornecedor
               </Button>
             </CardContent>
           </Card>
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle>{customers.length} Clientes Cadastrados</CardTitle>
+              <CardTitle>Fornecedores Cadastrados</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Contato</TableHead>
-                      <TableHead>Localização</TableHead>
-                      <TableHead>CPF/CNPJ</TableHead>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {customers.map((customer) => (
-                      <TableRow key={customer.id}>
-                        <TableCell className="font-medium">{customer.name}</TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            {customer.email && (
-                              <div className="flex items-center gap-2 text-sm">
-                                <Mail className="h-3 w-3 text-muted-foreground" />
-                                {customer.email}
-                              </div>
-                            )}
-                            {customer.phone && (
-                              <div className="flex items-center gap-2 text-sm">
-                                <Phone className="h-3 w-3 text-muted-foreground" />
-                                {customer.phone}
-                              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Contato</TableHead>
+                    <TableHead>Endereço</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {suppliers.map((supplier) => (
+                    <TableRow key={supplier.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="font-medium">{supplier.name}</p>
+                            {supplier.cpf_cnpj && (
+                              <p className="text-sm text-muted-foreground">{supplier.cpf_cnpj}</p>
                             )}
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          {customer.city && customer.state && (
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {supplier.email && (
                             <div className="flex items-center gap-2 text-sm">
-                              <MapPin className="h-3 w-3 text-muted-foreground" />
-                              {customer.city}, {customer.state}
+                              <Mail className="h-3 w-3" />
+                              {supplier.email}
                             </div>
                           )}
-                        </TableCell>
-                        <TableCell>{customer.cpf_cnpj}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEdit(customer)}
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDelete(customer.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                          {supplier.phone && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Phone className="h-3 w-3" />
+                              {supplier.phone}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {supplier.address && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <MapPin className="h-3 w-3" />
+                            <span>
+                              {supplier.address}, {supplier.city} - {supplier.state}
+                            </span>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(supplier)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(supplier.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         )}

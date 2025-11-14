@@ -54,6 +54,8 @@ interface Transaction {
 export default function Finance() {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -75,13 +77,35 @@ export default function Finance() {
     paid_date: "",
     status: "pendente",
     notes: "",
+    customer_id: "",
+    supplier_id: "",
   });
 
   useEffect(() => {
     if (user) {
       loadTransactions();
+      loadCustomers();
+      loadSuppliers();
     }
   }, [user, filterMonth, filterType]);
+
+  const loadCustomers = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("customers")
+      .select("*")
+      .eq("user_id", user.id);
+    if (data) setCustomers(data);
+  };
+
+  const loadSuppliers = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("suppliers")
+      .select("*")
+      .eq("user_id", user.id);
+    if (data) setSuppliers(data);
+  };
 
   const loadTransactions = async () => {
     if (!user) return;
@@ -148,6 +172,8 @@ export default function Finance() {
       ...transaction,
       due_date_2: transaction.due_date_2 || "",
       due_date_3: transaction.due_date_3 || "",
+      customer_id: (transaction as any).customer_id || "",
+      supplier_id: (transaction as any).supplier_id || "",
     });
     setDialogOpen(true);
   };
@@ -180,6 +206,8 @@ export default function Finance() {
       paid_date: "",
       status: "pendente",
       notes: "",
+      customer_id: "",
+      supplier_id: "",
     });
     setEditingTransaction(null);
     setDialogOpen(false);
@@ -283,18 +311,63 @@ export default function Finance() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">
-                    {formData.category === "fornecedor" && "Nome do Fornecedor"}
-                    {formData.category === "cliente" && "Nome do Cliente"}
-                    {formData.category === "imposto" && "Tipo de Imposto"}
-                    *
-                  </Label>
-                  <Input
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    required
-                  />
+                  {formData.category === "fornecedor" && (
+                    <>
+                      <Label htmlFor="supplier">Fornecedor *</Label>
+                      <Select
+                        value={formData.supplier_id}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, supplier_id: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um fornecedor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {suppliers.map((supplier) => (
+                            <SelectItem key={supplier.id} value={supplier.id}>
+                              {supplier.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </>
+                  )}
+                  
+                  {formData.category === "cliente" && (
+                    <>
+                      <Label htmlFor="customer">Cliente *</Label>
+                      <Select
+                        value={formData.customer_id}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, customer_id: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um cliente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customers.map((customer) => (
+                            <SelectItem key={customer.id} value={customer.id}>
+                              {customer.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </>
+                  )}
+                  
+                  {formData.category === "imposto" && (
+                    <>
+                      <Label htmlFor="description">Tipo de Imposto *</Label>
+                      <Input
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        required
+                      />
+                    </>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
