@@ -24,8 +24,10 @@ export function Layout({ children }: LayoutProps) {
   const navigation = [
     { name: "Obras", href: "/obras", icon: Hammer },
     { name: "Financeiro", href: "/financeiro", icon: DollarSign },
+    { name: "Materiais", href: "/materiais", icon: Store },
     { name: "Madeireiras", href: "/madeireiras", icon: Store },
-    { name: "Cadastro", href: "/cadastro", icon: Users },
+    { name: "Clientes", href: "/cadastro", icon: Users },
+    { name: "Fornecedores", href: "/fornecedores", icon: Store },
     { name: "Perfil", href: "/perfil", icon: User },
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
   ];

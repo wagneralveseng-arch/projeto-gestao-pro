@@ -47,15 +47,12 @@ export default function Projects() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   
-  const [photos, setPhotos] = useState<File[]>([]);
-  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
-  
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     start_date: "",
     expected_end_date: "",
-    status: "planejamento",
+    status: "orcamento",
     customer_id: "",
   });
 
@@ -93,28 +90,6 @@ export default function Projects() {
     e.preventDefault();
 
     try {
-      let uploadedPhotoUrls: string[] = [...photoUrls];
-
-      // Upload new photos
-      if (photos.length > 0) {
-        for (const photo of photos) {
-          const fileExt = photo.name.split(".").pop();
-          const fileName = `${user?.id}-${Date.now()}-${Math.random()}.${fileExt}`;
-          
-          const { data, error: uploadError } = await supabase.storage
-            .from("project-photos")
-            .upload(`projects/${fileName}`, photo);
-
-          if (uploadError) throw uploadError;
-
-          const { data: { publicUrl } } = supabase.storage
-            .from("project-photos")
-            .getPublicUrl(`projects/${fileName}`);
-
-          uploadedPhotoUrls.push(publicUrl);
-        }
-      }
-
       // Get address from selected customer
       const selectedCustomer = customers.find(c => c.id === formData.customer_id);
       const address = selectedCustomer 
@@ -127,7 +102,6 @@ export default function Projects() {
           .update({
             ...formData,
             address,
-            photo_urls: uploadedPhotoUrls,
           })
           .eq("id", editingProject.id);
 
@@ -139,7 +113,6 @@ export default function Projects() {
           .insert([{ 
             ...formData, 
             address,
-            photo_urls: uploadedPhotoUrls,
             user_id: user?.id 
           }]);
 
@@ -158,7 +131,6 @@ export default function Projects() {
     setEditingProject(project);
     const { address, ...restData } = project;
     setFormData(restData);
-    setPhotoUrls((project as any).photo_urls || []);
     setDialogOpen(true);
   };
 
@@ -181,27 +153,16 @@ export default function Projects() {
       description: "",
       start_date: "",
       expected_end_date: "",
-      status: "planejamento",
+      status: "orcamento",
       customer_id: "",
     });
-    setPhotos([]);
-    setPhotoUrls([]);
     setEditingProject(null);
     setDialogOpen(false);
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (photos.length + files.length > 5) {
-      toast.error("Máximo de 5 fotos permitido");
-      return;
-    }
-    setPhotos([...photos, ...files]);
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "planejamento":
+      case "orcamento":
         return "bg-warning text-warning-foreground";
       case "em_andamento":
         return "bg-secondary text-secondary-foreground";
@@ -214,8 +175,8 @@ export default function Projects() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "planejamento":
-        return "Planejamento";
+      case "orcamento":
+        return "Orçamento";
       case "em_andamento":
         return "Em Andamento";
       case "concluida":
@@ -326,7 +287,7 @@ export default function Projects() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="planejamento">Planejamento</SelectItem>
+                      <SelectItem value="orcamento">Orçamento</SelectItem>
                       <SelectItem value="em_andamento">Em Andamento</SelectItem>
                       <SelectItem value="concluida">Concluída</SelectItem>
                     </SelectContent>
@@ -343,22 +304,6 @@ export default function Projects() {
                     }
                     rows={4}
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="photos">Fotos da Obra (máximo 5)</Label>
-                  <Input
-                    id="photos"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handlePhotoChange}
-                  />
-                  {(photos.length > 0 || photoUrls.length > 0) && (
-                    <p className="text-sm text-muted-foreground">
-                      {photos.length + photoUrls.length} foto(s) selecionada(s)
-                    </p>
-                  )}
                 </div>
 
                 <div className="flex justify-end gap-2">

@@ -43,6 +43,8 @@ export default function ProjectTasks({ project, onBack }: ProjectTasksProps) {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -73,37 +75,64 @@ export default function ProjectTasks({ project, onBack }: ProjectTasksProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (editingTask) {
-      const { error } = await supabase
-        .from("tasks")
-        .update(formData)
-        .eq("id", editingTask.id);
+    try {
+      let uploadedPhotoUrls: string[] = [...photoUrls];
 
-      if (error) {
-        toast.error("Erro ao atualizar tarefa");
-      } else {
+      // Upload new photos
+      if (photos.length > 0) {
+        for (const photo of photos) {
+          const fileExt = photo.name.split(".").pop();
+          const fileName = `${project.id}-${Date.now()}-${Math.random()}.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from("project-photos")
+            .upload(`tasks/${fileName}`, photo);
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from("project-photos")
+            .getPublicUrl(`tasks/${fileName}`);
+
+          uploadedPhotoUrls.push(publicUrl);
+        }
+      }
+
+      if (editingTask) {
+        const { error } = await supabase
+          .from("tasks")
+          .update({
+            ...formData,
+            photo_urls: uploadedPhotoUrls,
+          })
+          .eq("id", editingTask.id);
+
+        if (error) throw error;
         toast.success("Tarefa atualizada com sucesso!");
-        loadTasks();
-        resetForm();
-      }
-    } else {
-      const { error } = await supabase
-        .from("tasks")
-        .insert([{ ...formData, project_id: project.id }]);
-
-      if (error) {
-        toast.error("Erro ao criar tarefa");
       } else {
+        const { error } = await supabase
+          .from("tasks")
+          .insert([{ 
+            ...formData, 
+            photo_urls: uploadedPhotoUrls,
+            project_id: project.id 
+          }]);
+
+        if (error) throw error;
         toast.success("Tarefa criada com sucesso!");
-        loadTasks();
-        resetForm();
       }
+
+      loadTasks();
+      resetForm();
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao salvar tarefa");
     }
   };
 
   const handleEdit = (task: Task) => {
     setEditingTask(task);
     setFormData(task);
+    setPhotoUrls((task as any).photo_urls || []);
     setDialogOpen(true);
   };
 
@@ -129,8 +158,19 @@ export default function ProjectTasks({ project, onBack }: ProjectTasksProps) {
       actual_date: "",
       cost: 0,
     });
+    setPhotos([]);
+    setPhotoUrls([]);
     setEditingTask(null);
     setDialogOpen(false);
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (photos.length + photoUrls.length + files.length > 5) {
+      toast.error("Máximo de 5 fotos permitido");
+      return;
+    }
+    setPhotos([...photos, ...files]);
   };
 
   const getStatusColor = (status: string) => {
@@ -265,9 +305,25 @@ export default function ProjectTasks({ project, onBack }: ProjectTasksProps) {
                   step="0.01"
                   value={formData.cost}
                   onChange={(e) =>
-                    setFormData({ ...formData, cost: Number(e.target.value) })
+                    setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })
                   }
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="photos">Fotos da Tarefa (máximo 5)</Label>
+                <Input
+                  id="photos"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handlePhotoChange}
+                />
+                {(photos.length > 0 || photoUrls.length > 0) && (
+                  <p className="text-sm text-muted-foreground">
+                    {photos.length + photoUrls.length} foto(s) selecionada(s)
+                  </p>
+                )}
               </div>
 
               <div className="flex justify-end gap-2">

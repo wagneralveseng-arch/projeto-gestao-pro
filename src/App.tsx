@@ -11,6 +11,8 @@ import Finance from "./pages/Finance";
 import Suppliers from "./pages/Suppliers";
 import Customers from "./pages/Customers";
 import Profile from "./pages/Profile";
+import Materiais from "./pages/Materiais";
+import RegisteredSuppliers from "./pages/RegisteredSuppliers";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -28,8 +30,10 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/obras" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
             <Route path="/financeiro" element={<ProtectedRoute><Finance /></ProtectedRoute>} />
+            <Route path="/materiais" element={<ProtectedRoute><Materiais /></ProtectedRoute>} />
             <Route path="/madeireiras" element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />
             <Route path="/cadastro" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
+            <Route path="/fornecedores" element={<ProtectedRoute><RegisteredSuppliers /></ProtectedRoute>} />
             <Route path="/perfil" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
