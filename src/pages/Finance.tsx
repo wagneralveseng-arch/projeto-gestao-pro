@@ -138,13 +138,32 @@ export default function Finance() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Prepare data, removing empty optional fields
+    const dataToSubmit = {
+      type: formData.type,
+      category: formData.category,
+      description: formData.description,
+      amount: formData.amount,
+      payment_method: formData.payment_method,
+      installments: formData.installments,
+      installment_terms: formData.installment_terms || null,
+      due_date: formData.due_date,
+      due_date_2: formData.due_date_2 || null,
+      due_date_3: formData.due_date_3 || null,
+      status: formData.status,
+      notes: formData.notes || null,
+      customer_id: formData.customer_id || null,
+      supplier_id: formData.supplier_id || null,
+    };
+
     if (editingTransaction) {
       const { error } = await supabase
         .from("transactions")
-        .update(formData)
+        .update(dataToSubmit)
         .eq("id", editingTransaction.id);
 
       if (error) {
+        console.error("Erro ao atualizar:", error);
         toast.error("Erro ao atualizar transação");
       } else {
         toast.success("Transação atualizada com sucesso!");
@@ -154,10 +173,11 @@ export default function Finance() {
     } else {
       const { error } = await supabase
         .from("transactions")
-        .insert([{ ...formData, user_id: user?.id }]);
+        .insert([{ ...dataToSubmit, user_id: user?.id }]);
 
       if (error) {
-        toast.error("Erro ao criar transação");
+        console.error("Erro ao criar:", error);
+        toast.error("Erro ao criar transação: " + error.message);
       } else {
         toast.success("Transação criada com sucesso!");
         loadTransactions();
