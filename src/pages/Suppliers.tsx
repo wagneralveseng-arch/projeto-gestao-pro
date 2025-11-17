@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -11,17 +10,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import suppliersData from "@/data/madeireiras.csv";
 
 interface Supplier {
+  Loja: string;
   Rede: string;
   Bairro: string;
   Município: string;
   UF: string;
-  Endereço: string;
-  CEP: string;
-  Telefone: string;
-  Contato: string;
 }
 
 export default function Suppliers() {
@@ -55,16 +59,13 @@ export default function Suppliers() {
       const parsedSuppliers: Supplier[] = lines
         .filter(line => line.trim())
         .map(line => {
-          const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+          const values = line.split(';').map(v => v.trim());
           return {
-            Rede: values[0] || '',
-            Bairro: values[1] || '',
-            Município: values[2] || '',
-            UF: values[3] || '',
-            Endereço: values[4] || '',
-            CEP: values[5] || '',
-            Telefone: values[6] || '',
-            Contato: values[7] || '',
+            Loja: values[0] || '',
+            Rede: values[1] || '',
+            Bairro: values[2] || '',
+            Município: values[3] || '',
+            UF: values[5] || '',
           };
         });
 
@@ -221,54 +222,40 @@ export default function Suppliers() {
           </CardContent>
         </Card>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredSuppliers.map((supplier, index) => (
-            <Card key={index}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{supplier.Rede}</CardTitle>
-                  <Badge variant="outline">{supplier.UF}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="text-sm">
-                  <span className="font-medium">Bairro:</span> {supplier.Bairro}
-                </div>
-                <div className="text-sm">
-                  <span className="font-medium">Município:</span> {supplier.Município}
-                </div>
-                {supplier.Endereço && (
-                  <div className="text-sm">
-                    <span className="font-medium">Endereço:</span> {supplier.Endereço}
-                  </div>
-                )}
-                {supplier.CEP && (
-                  <div className="text-sm">
-                    <span className="font-medium">CEP:</span> {supplier.CEP}
-                  </div>
-                )}
-                {supplier.Telefone && (
-                  <div className="text-sm">
-                    <span className="font-medium">Telefone:</span> {supplier.Telefone}
-                  </div>
-                )}
-                {supplier.Contato && (
-                  <div className="text-sm">
-                    <span className="font-medium">Contato:</span> {supplier.Contato}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredSuppliers.length === 0 && (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground">Nenhuma madeireira encontrada com os filtros selecionados.</p>
-            </CardContent>
-          </Card>
-        )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Lista de Madeireiras</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Loja</TableHead>
+                  <TableHead>Rede</TableHead>
+                  <TableHead>Bairro</TableHead>
+                  <TableHead>Município</TableHead>
+                  <TableHead>UF</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredSuppliers.map((supplier, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{supplier.Loja}</TableCell>
+                    <TableCell>{supplier.Rede}</TableCell>
+                    <TableCell>{supplier.Bairro}</TableCell>
+                    <TableCell>{supplier.Município}</TableCell>
+                    <TableCell>{supplier.UF}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {filteredSuppliers.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12">
+                <p className="text-muted-foreground">Nenhuma madeireira encontrada com os filtros selecionados.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );
