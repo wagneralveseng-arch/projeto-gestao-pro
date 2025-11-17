@@ -138,8 +138,8 @@ export default function Finance() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Prepare data, removing empty optional fields
-    const dataToSubmit = {
+    // Base payload (only valid DB columns)
+    const basePayload: any = {
       type: formData.type,
       category: formData.category,
       description: formData.description,
@@ -148,23 +148,24 @@ export default function Finance() {
       installments: formData.installments,
       installment_terms: formData.installment_terms || null,
       due_date: formData.due_date,
-      due_date_2: formData.due_date_2 || null,
-      due_date_3: formData.due_date_3 || null,
+      paid_date: formData.paid_date || null,
       status: formData.status,
       notes: formData.notes || null,
-      customer_id: formData.customer_id || null,
-      supplier_id: formData.supplier_id || null,
     };
+
+    // Only include foreign keys if actually selected
+    if (formData.customer_id) basePayload.customer_id = formData.customer_id;
+    if (formData.supplier_id) basePayload.supplier_id = formData.supplier_id;
 
     if (editingTransaction) {
       const { error } = await supabase
         .from("transactions")
-        .update(dataToSubmit)
+        .update(basePayload)
         .eq("id", editingTransaction.id);
 
       if (error) {
         console.error("Erro ao atualizar:", error);
-        toast.error("Erro ao atualizar transação");
+        toast.error("Erro ao atualizar transação: " + error.message);
       } else {
         toast.success("Transação atualizada com sucesso!");
         loadTransactions();
@@ -173,7 +174,7 @@ export default function Finance() {
     } else {
       const { error } = await supabase
         .from("transactions")
-        .insert([{ ...dataToSubmit, user_id: user?.id }]);
+        .insert([{ ...basePayload, user_id: user?.id }]);
 
       if (error) {
         console.error("Erro ao criar:", error);
