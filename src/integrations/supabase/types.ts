@@ -64,6 +64,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string | null
           email: string | null
           full_name: string | null
@@ -72,6 +73,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
@@ -80,6 +82,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
@@ -100,6 +103,7 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          photo_urls: string[] | null
           start_date: string | null
           status: string | null
           total_cost: number | null
@@ -116,6 +120,7 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          photo_urls?: string[] | null
           start_date?: string | null
           status?: string | null
           total_cost?: number | null
@@ -132,6 +137,7 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          photo_urls?: string[] | null
           start_date?: string | null
           status?: string | null
           total_cost?: number | null
@@ -148,6 +154,54 @@ export type Database = {
           },
         ]
       }
+      suppliers: {
+        Row: {
+          address: string | null
+          city: string | null
+          cpf_cnpj: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          state: string | null
+          updated_at: string | null
+          user_id: string
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          cpf_cnpj?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string | null
+          user_id: string
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          cpf_cnpj?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string | null
+          user_id?: string
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           actual_date: string | null
@@ -157,6 +211,7 @@ export type Database = {
           expected_date: string | null
           id: string
           order_index: number | null
+          photo_urls: string[] | null
           project_id: string
           status: string | null
           title: string
@@ -170,6 +225,7 @@ export type Database = {
           expected_date?: string | null
           id?: string
           order_index?: number | null
+          photo_urls?: string[] | null
           project_id: string
           status?: string | null
           title: string
@@ -183,6 +239,7 @@ export type Database = {
           expected_date?: string | null
           id?: string
           order_index?: number | null
+          photo_urls?: string[] | null
           project_id?: string
           status?: string | null
           title?: string
@@ -203,6 +260,7 @@ export type Database = {
           amount: number
           category: string
           created_at: string | null
+          customer_id: string | null
           description: string
           due_date: string
           id: string
@@ -213,6 +271,7 @@ export type Database = {
           payment_method: string | null
           project_id: string | null
           status: string | null
+          supplier_id: string | null
           type: string
           updated_at: string | null
           user_id: string
@@ -221,6 +280,7 @@ export type Database = {
           amount: number
           category: string
           created_at?: string | null
+          customer_id?: string | null
           description: string
           due_date: string
           id?: string
@@ -231,6 +291,7 @@ export type Database = {
           payment_method?: string | null
           project_id?: string | null
           status?: string | null
+          supplier_id?: string | null
           type: string
           updated_at?: string | null
           user_id: string
@@ -239,6 +300,7 @@ export type Database = {
           amount?: number
           category?: string
           created_at?: string | null
+          customer_id?: string | null
           description?: string
           due_date?: string
           id?: string
@@ -249,6 +311,7 @@ export type Database = {
           payment_method?: string | null
           project_id?: string | null
           status?: string | null
+          supplier_id?: string | null
           type?: string
           updated_at?: string | null
           user_id?: string
