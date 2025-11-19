@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { Layout } from "@/components/Layout";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -9,9 +12,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -27,12 +28,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { Plus, Edit, Trash2, Filter } from "lucide-react";
-import { toast } from "sonner";
-import { format } from "date-fns";
-import { Badge } from "@/components/ui/badge";
+import { toast } from "@/hooks/use-toast";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Transaction {
   id: string;
@@ -40,45 +38,61 @@ interface Transaction {
   category: string;
   description: string;
   amount: number;
-  payment_method: string;
-  installments: number;
-  installment_terms: string;
   due_date: string;
-  due_date_2?: string;
-  due_date_3?: string;
-  paid_date: string;
+  paid_date: string | null;
   status: string;
-  notes: string;
+  payment_method: string | null;
+  installments: number;
+  installment_terms: string | null;
+  notes: string | null;
+  customer_id: string | null;
+  supplier_id: string | null;
+  employee_id: string | null;
+  project_id: string | null;
+}
+
+interface Customer {
+  id: string;
+  name: string;
+}
+
+interface Supplier {
+  id: string;
+  name: string;
+}
+
+interface Employee {
+  id: string;
+  name: string;
 }
 
 export default function Finance() {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  
-  const [filterMonth, setFilterMonth] = useState(format(new Date(), "yyyy-MM"));
-  const [filterType, setFilterType] = useState("all");
-  
+  const [filterMonth, setFilterMonth] = useState<string>("");
+  const [filterType, setFilterType] = useState<string>("all");
+
   const [formData, setFormData] = useState({
     type: "despesa",
-    category: "fornecedor",
+    category: "Fornecedor",
     description: "",
-    amount: 0,
-    payment_method: "pix",
+    amount: "",
+    due_date: "",
+    payment_method: "Pix",
     installments: 1,
     installment_terms: "",
-    due_date: "",
-    due_date_2: "",
-    due_date_3: "",
-    paid_date: "",
     status: "pendente",
     notes: "",
     customer_id: "",
     supplier_id: "",
+    employee_id: "",
+    project_id: "",
   });
 
   useEffect(() => {
@@ -86,206 +100,282 @@ export default function Finance() {
       loadTransactions();
       loadCustomers();
       loadSuppliers();
+      loadEmployees();
     }
-  }, [user, filterMonth, filterType]);
+  }, [user]);
+
+  const loadTransactions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", user?.id)
+        .order("due_date", { ascending: false });
+
+      if (error) throw error;
+      setTransactions(data || []);
+    } catch (error: any) {
+      console.error("Erro ao carregar transações:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as transações",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadCustomers = async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from("customers")
-      .select("*")
-      .eq("user_id", user.id);
-    if (data) setCustomers(data);
+    try {
+      const { data, error } = await supabase
+        .from("customers")
+        .select("id, name")
+        .eq("user_id", user?.id);
+
+      if (error) throw error;
+      setCustomers(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar clientes:", error);
+    }
   };
 
   const loadSuppliers = async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from("suppliers")
-      .select("*")
-      .eq("user_id", user.id);
-    if (data) setSuppliers(data);
+    try {
+      const { data, error } = await supabase
+        .from("suppliers")
+        .select("id, name")
+        .eq("user_id", user?.id);
+
+      if (error) throw error;
+      setSuppliers(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar fornecedores:", error);
+    }
   };
 
-  const loadTransactions = async () => {
-    if (!user) return;
-    setLoading(true);
+  const loadEmployees = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("employees")
+        .select("id, name")
+        .eq("user_id", user?.id);
 
-    let query = supabase
-      .from("transactions")
-      .select("*")
-      .eq("user_id", user.id);
-
-    // Apply filters
-    if (filterMonth) {
-      const startDate = `${filterMonth}-01`;
-      const endDate = `${filterMonth}-31`;
-      query = query.gte("due_date", startDate).lte("due_date", endDate);
+      if (error) throw error;
+      setEmployees(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar funcionários:", error);
     }
-
-    if (filterType !== "all") {
-      query = query.eq("type", filterType);
-    }
-
-    const { data, error } = await query.order("due_date", { ascending: false });
-
-    if (!error && data) {
-      setTransactions(data);
-    }
-    setLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Base payload (only valid DB columns)
-    const basePayload: any = {
+    const payload: any = {
       type: formData.type,
       category: formData.category,
       description: formData.description,
-      amount: formData.amount,
+      amount: parseFloat(formData.amount),
       payment_method: formData.payment_method,
       installments: formData.installments,
       installment_terms: formData.installment_terms || null,
       due_date: formData.due_date,
-      paid_date: formData.paid_date || null,
       status: formData.status,
       notes: formData.notes || null,
     };
 
-    // Only include foreign keys if actually selected
-    if (formData.customer_id) basePayload.customer_id = formData.customer_id;
-    if (formData.supplier_id) basePayload.supplier_id = formData.supplier_id;
+    // Add related IDs based on category
+    if (formData.category === "Receita" && formData.customer_id) {
+      payload.customer_id = formData.customer_id;
+    }
+    if (formData.category === "Fornecedor" && formData.supplier_id) {
+      payload.supplier_id = formData.supplier_id;
+    }
+    if (formData.category === "Funcionário" && formData.employee_id) {
+      payload.employee_id = formData.employee_id;
+    }
 
-    if (editingTransaction) {
-      const { error } = await supabase
-        .from("transactions")
-        .update(basePayload)
-        .eq("id", editingTransaction.id);
+    try {
+      if (editingTransaction) {
+        const { error } = await supabase
+          .from("transactions")
+          .update(payload)
+          .eq("id", editingTransaction.id);
 
-      if (error) {
-        console.error("Erro ao atualizar:", error);
-        toast.error("Erro ao atualizar transação: " + error.message);
+        if (error) throw error;
+        toast({
+          title: "Sucesso",
+          description: "Transação atualizada com sucesso!",
+        });
       } else {
-        toast.success("Transação atualizada com sucesso!");
-        loadTransactions();
-        resetForm();
-      }
-    } else {
-      const { error } = await supabase
-        .from("transactions")
-        .insert([{ ...basePayload, user_id: user?.id }]);
+        const { error } = await supabase
+          .from("transactions")
+          .insert([{ ...payload, user_id: user?.id }]);
 
-      if (error) {
-        console.error("Erro ao criar:", error);
-        toast.error("Erro ao criar transação: " + error.message);
-      } else {
-        toast.success("Transação criada com sucesso!");
-        loadTransactions();
-        resetForm();
+        if (error) throw error;
+        toast({
+          title: "Sucesso",
+          description: "Transação criada com sucesso!",
+        });
       }
+
+      loadTransactions();
+      resetForm();
+      setOpen(false);
+    } catch (error: any) {
+      console.error("Erro ao salvar transação:", error);
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível salvar a transação",
+        variant: "destructive",
+      });
     }
   };
 
   const handleEdit = (transaction: Transaction) => {
     setEditingTransaction(transaction);
     setFormData({
-      ...transaction,
-      due_date_2: transaction.due_date_2 || "",
-      due_date_3: transaction.due_date_3 || "",
-      customer_id: (transaction as any).customer_id || "",
-      supplier_id: (transaction as any).supplier_id || "",
+      type: transaction.type,
+      category: transaction.category,
+      description: transaction.description,
+      amount: transaction.amount.toString(),
+      due_date: transaction.due_date,
+      payment_method: transaction.payment_method || "Pix",
+      installments: transaction.installments,
+      installment_terms: transaction.installment_terms || "",
+      status: transaction.status,
+      notes: transaction.notes || "",
+      customer_id: transaction.customer_id || "",
+      supplier_id: transaction.supplier_id || "",
+      employee_id: transaction.employee_id || "",
+      project_id: transaction.project_id || "",
     });
-    setDialogOpen(true);
+    setOpen(true);
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Tem certeza que deseja excluir esta transação?")) return;
 
-    const { error } = await supabase.from("transactions").delete().eq("id", id);
+    try {
+      const { error } = await supabase
+        .from("transactions")
+        .delete()
+        .eq("id", id);
 
-    if (error) {
-      toast.error("Erro ao excluir transação");
-    } else {
-      toast.success("Transação excluída com sucesso!");
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Transação excluída com sucesso!",
+      });
       loadTransactions();
+    } catch (error: any) {
+      console.error("Erro ao excluir:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir a transação",
+        variant: "destructive",
+      });
     }
   };
 
   const resetForm = () => {
     setFormData({
       type: "despesa",
-      category: "fornecedor",
+      category: "Fornecedor",
       description: "",
-      amount: 0,
-      payment_method: "pix",
+      amount: "",
+      due_date: "",
+      payment_method: "Pix",
       installments: 1,
       installment_terms: "",
-      due_date: "",
-      due_date_2: "",
-      due_date_3: "",
-      paid_date: "",
       status: "pendente",
       notes: "",
       customer_id: "",
       supplier_id: "",
+      employee_id: "",
+      project_id: "",
     });
     setEditingTransaction(null);
-    setDialogOpen(false);
   };
 
   const toggleStatus = async (transaction: Transaction) => {
-    const newStatus = transaction.status === "pago" ? "pendente" : "pago";
-    const { error } = await supabase
-      .from("transactions")
-      .update({ status: newStatus })
-      .eq("id", transaction.id);
+    const newStatus = transaction.status === "pendente" ? "pago" : "pendente";
+    const paid_date = newStatus === "pago" ? new Date().toISOString().split("T")[0] : null;
 
-    if (error) {
-      toast.error("Erro ao atualizar status");
-    } else {
-      toast.success(`Status alterado para ${newStatus}`);
+    try {
+      const { error } = await supabase
+        .from("transactions")
+        .update({ status: newStatus, paid_date })
+        .eq("id", transaction.id);
+
+      if (error) throw error;
       loadTransactions();
+      toast({
+        title: "Sucesso",
+        description: `Status alterado para ${newStatus}`,
+      });
+    } catch (error: any) {
+      console.error("Erro:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o status",
+        variant: "destructive",
+      });
     }
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pago":
-        return "bg-success text-success-foreground";
-      case "pendente":
-        return "bg-warning text-warning-foreground";
-      case "vencido":
-        return "bg-destructive text-destructive-foreground";
-      default:
-        return "bg-muted text-muted-foreground";
-    }
+    return status === "pago"
+      ? "bg-green-100 text-green-800"
+      : "bg-yellow-100 text-yellow-800";
   };
 
-  const totals = transactions.reduce(
-    (acc, t) => {
-      if (t.status === "pago") {
-        if (t.type === "receita") acc.receitas += Number(t.amount);
-        else acc.despesas += Number(t.amount);
+  const filteredTransactions = transactions.filter((transaction) => {
+    const matchesMonth = filterMonth
+      ? transaction.due_date.startsWith(filterMonth)
+      : true;
+    const matchesType =
+      filterType === "all" ? true : transaction.type === filterType;
+    return matchesMonth && matchesType;
+  });
+
+  const totals = filteredTransactions.reduce(
+    (acc, transaction) => {
+      if (transaction.status === "pago") {
+        if (transaction.type === "receita") {
+          acc.revenue += transaction.amount;
+        } else {
+          acc.expenses += transaction.amount;
+        }
       }
       return acc;
     },
-    { receitas: 0, despesas: 0 }
+    { revenue: 0, expenses: 0 }
   );
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Financeiro</h1>
-            <p className="text-muted-foreground">Controle suas receitas e despesas</p>
-          </div>
-
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-foreground">Financeiro</h1>
+          <Dialog open={open} onOpenChange={(isOpen) => {
+            setOpen(isOpen);
+            if (!isOpen) resetForm();
+          }}>
             <DialogTrigger asChild>
-              <Button onClick={resetForm} className="gap-2">
-                <Plus className="h-4 w-4" />
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
                 Nova Transação
               </Button>
             </DialogTrigger>
@@ -297,117 +387,158 @@ export default function Finance() {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="type">Tipo *</Label>
+                  <div>
+                    <Label htmlFor="type">Tipo</Label>
                     <Select
                       value={formData.type}
-                      onValueChange={(value) => setFormData({ ...formData, type: value })}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, type: value })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="receita">A Receber</SelectItem>
-                        <SelectItem value="despesa">A Pagar</SelectItem>
+                        <SelectItem value="receita">Receita</SelectItem>
+                        <SelectItem value="despesa">Despesa</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Categoria *</Label>
+                  <div>
+                    <Label htmlFor="category">Categoria</Label>
                     <Select
                       value={formData.category}
-                      onValueChange={(value) => setFormData({ ...formData, category: value })}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, category: value })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="fornecedor">Fornecedor</SelectItem>
-                        <SelectItem value="cliente">Cliente</SelectItem>
-                        <SelectItem value="imposto">Imposto</SelectItem>
+                        <SelectItem value="Receita">Receita</SelectItem>
+                        <SelectItem value="Fornecedor">Fornecedor</SelectItem>
+                        <SelectItem value="Imposto">Imposto</SelectItem>
+                        <SelectItem value="Funcionário">Funcionário</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  {formData.category === "fornecedor" && (
-                    <>
-                      <Label htmlFor="supplier">Fornecedor *</Label>
-                      <Select
-                        value={formData.supplier_id}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, supplier_id: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um fornecedor" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {suppliers.map((supplier) => (
-                            <SelectItem key={supplier.id} value={supplier.id}>
-                              {supplier.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </>
-                  )}
-                  
-                  {formData.category === "cliente" && (
-                    <>
-                      <Label htmlFor="customer">Cliente *</Label>
-                      <Select
-                        value={formData.customer_id}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, customer_id: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um cliente" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {customers.map((customer) => (
-                            <SelectItem key={customer.id} value={customer.id}>
-                              {customer.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </>
-                  )}
-                  
-                  {formData.category === "imposto" && (
-                    <>
-                      <Label htmlFor="description">Tipo de Imposto *</Label>
-                      <Input
-                        id="description"
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        required
-                      />
-                    </>
-                  )}
+                {formData.category === "Receita" && (
+                  <div>
+                    <Label htmlFor="customer_id">Cliente</Label>
+                    <Select
+                      value={formData.customer_id}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, customer_id: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um cliente" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customers.map((customer) => (
+                          <SelectItem key={customer.id} value={customer.id}>
+                            {customer.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {formData.category === "Fornecedor" && (
+                  <div>
+                    <Label htmlFor="supplier_id">Fornecedor</Label>
+                    <Select
+                      value={formData.supplier_id}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, supplier_id: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um fornecedor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {suppliers.map((supplier) => (
+                          <SelectItem key={supplier.id} value={supplier.id}>
+                            {supplier.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {formData.category === "Funcionário" && (
+                  <div>
+                    <Label htmlFor="employee_id">Funcionário</Label>
+                    <Select
+                      value={formData.employee_id}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, employee_id: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um funcionário" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.map((employee) => (
+                          <SelectItem key={employee.id} value={employee.id}>
+                            {employee.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor="description">Descrição</Label>
+                  <Input
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    required
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="amount">Valor (R$) *</Label>
+                  <div>
+                    <Label htmlFor="amount">Valor (R$)</Label>
                     <Input
                       id="amount"
                       type="number"
                       step="0.01"
                       value={formData.amount}
                       onChange={(e) =>
-                        setFormData({ ...formData, amount: Number(e.target.value) })
+                        setFormData({ ...formData, amount: e.target.value })
                       }
                       required
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="payment_method">Forma de Pagamento *</Label>
+                  <div>
+                    <Label htmlFor="due_date">Data de Vencimento</Label>
+                    <Input
+                      id="due_date"
+                      type="date"
+                      value={formData.due_date}
+                      onChange={(e) =>
+                        setFormData({ ...formData, due_date: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="payment_method">Forma de Pagamento</Label>
                     <Select
                       value={formData.payment_method}
                       onValueChange={(value) =>
@@ -418,42 +549,47 @@ export default function Finance() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pix">Pix</SelectItem>
-                        <SelectItem value="credito">Cartão de Crédito</SelectItem>
-                        <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                        <SelectItem value="faturado">Faturado</SelectItem>
+                        <SelectItem value="Pix">Pix</SelectItem>
+                        <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                        <SelectItem value="Cartão de Crédito">
+                          Cartão de Crédito
+                        </SelectItem>
+                        <SelectItem value="Faturado">Faturado</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
 
-                {formData.payment_method === "credito" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="installments">Parcelas</Label>
-                    <Select
-                      value={String(formData.installments)}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, installments: Number(value) })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                          <SelectItem key={n} value={String(n)}>
-                            {n}x
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                  {formData.payment_method === "Cartão de Crédito" && (
+                    <div>
+                      <Label htmlFor="installments">Parcelas</Label>
+                      <Select
+                        value={formData.installments.toString()}
+                        onValueChange={(value) =>
+                          setFormData({
+                            ...formData,
+                            installments: parseInt(value),
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map(
+                            (num) => (
+                              <SelectItem key={num} value={num.toString()}>
+                                {num}x
+                              </SelectItem>
+                            )
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
-                {formData.payment_method === "faturado" && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="installment_terms">Prazo de Faturamento</Label>
+                  {formData.payment_method === "Faturado" && (
+                    <div>
+                      <Label htmlFor="installment_terms">Prazo</Label>
                       <Select
                         value={formData.installment_terms}
                         onValueChange={(value) =>
@@ -464,74 +600,26 @@ export default function Finance() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="30">30 dias</SelectItem>
-                          <SelectItem value="30,60">30, 60 dias</SelectItem>
-                          <SelectItem value="30,60,90">30, 60, 90 dias</SelectItem>
+                          <SelectItem value="30 dias">30 dias</SelectItem>
+                          <SelectItem value="30, 60 dias">
+                            30, 60 dias
+                          </SelectItem>
+                          <SelectItem value="30, 60, 90 dias">
+                            30, 60, 90 dias
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    
-                    {formData.installment_terms === "30,60" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="due_date_2">Data de Vencimento 2 (60 dias)</Label>
-                        <Input
-                          id="due_date_2"
-                          type="date"
-                          value={formData.due_date_2}
-                          onChange={(e) =>
-                            setFormData({ ...formData, due_date_2: e.target.value })
-                          }
-                        />
-                      </div>
-                    )}
-                    
-                    {formData.installment_terms === "30,60,90" && (
-                      <>
-                        <div className="space-y-2">
-                          <Label htmlFor="due_date_2">Data de Vencimento 2 (60 dias)</Label>
-                          <Input
-                            id="due_date_2"
-                            type="date"
-                            value={formData.due_date_2}
-                            onChange={(e) =>
-                              setFormData({ ...formData, due_date_2: e.target.value })
-                            }
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="due_date_3">Data de Vencimento 3 (90 dias)</Label>
-                          <Input
-                            id="due_date_3"
-                            type="date"
-                            value={formData.due_date_3}
-                            onChange={(e) =>
-                              setFormData({ ...formData, due_date_3: e.target.value })
-                            }
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="due_date">Data de Vencimento *</Label>
-                  <Input
-                    id="due_date"
-                    type="date"
-                    value={formData.due_date}
-                    onChange={(e) =>
-                      setFormData({ ...formData, due_date: e.target.value })
-                    }
-                    required
-                  />
+                  )}
                 </div>
 
-                <div className="space-y-2">
+                <div>
                   <Label htmlFor="status">Status</Label>
                   <Select
                     value={formData.status}
-                    onValueChange={(value) => setFormData({ ...formData, status: value })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, status: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -539,23 +627,31 @@ export default function Finance() {
                     <SelectContent>
                       <SelectItem value="pendente">Pendente</SelectItem>
                       <SelectItem value="pago">Pago</SelectItem>
-                      <SelectItem value="vencido">Vencido</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                <div>
                   <Label htmlFor="notes">Observações</Label>
                   <Textarea
                     id="notes"
                     value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, notes: e.target.value })
+                    }
                     rows={3}
                   />
                 </div>
 
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={resetForm}>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setOpen(false);
+                      resetForm();
+                    }}
+                  >
                     Cancelar
                   </Button>
                   <Button type="submit">
@@ -567,142 +663,133 @@ export default function Finance() {
           </Dialog>
         </div>
 
-        {/* Filters */}
+        {/* Filtros */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex gap-4 items-center">
-              <Filter className="h-5 w-5 text-muted-foreground" />
-              <div className="flex gap-4 flex-1">
-                <div className="space-y-2">
-                  <Label htmlFor="filter-month">Mês/Ano</Label>
-                  <Input
-                    id="filter-month"
-                    type="month"
-                    value={filterMonth}
-                    onChange={(e) => setFilterMonth(e.target.value)}
-                    className="w-48"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="filter-type">Tipo de Transação</Label>
-                  <Select value={filterType} onValueChange={setFilterType}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="receita">A Receber</SelectItem>
-                      <SelectItem value="despesa">A Pagar</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+          <CardHeader>
+            <CardTitle>Filtros</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="filter-month">Mês</Label>
+                <Input
+                  id="filter-month"
+                  type="month"
+                  value={filterMonth}
+                  onChange={(e) => setFilterMonth(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="filter-type">Tipo</Label>
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="receita">Receita</SelectItem>
+                    <SelectItem value="despesa">Despesa</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Summary Cards */}
-        <div className="grid gap-6 md:grid-cols-2">
+        {/* Resumo */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-success">Receitas Pagas</CardTitle>
+              <CardTitle>Total Recebido</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                R$ {totals.receitas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-              </div>
+              <p className="text-3xl font-bold text-green-600">
+                R$ {totals.revenue.toFixed(2)}
+              </p>
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader>
-              <CardTitle className="text-destructive">Despesas Pagas</CardTitle>
+              <CardTitle>Total de Despesas</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                R$ {totals.despesas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-              </div>
+              <p className="text-3xl font-bold text-red-600">
+                R$ {totals.expenses.toFixed(2)}
+              </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Transactions Table */}
+        {/* Lista de Transações */}
         <Card>
           <CardHeader>
             <CardTitle>Transações</CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : transactions.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                Nenhuma transação encontrada.
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead>Valor</TableHead>
-                      <TableHead>Vencimento</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {transactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
-                        <TableCell>
-                          <Badge variant={transaction.type === "receita" ? "default" : "secondary"}>
-                            {transaction.type === "receita" ? "A Receber" : "A Pagar"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="capitalize">{transaction.category}</TableCell>
-                        <TableCell>{transaction.description}</TableCell>
-                        <TableCell className="font-medium">
-                          R$ {Number(transaction.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(transaction.due_date), "dd/MM/yyyy")}
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            className={`${getStatusColor(transaction.status)} cursor-pointer`}
-                            onClick={() => toggleStatus(transaction)}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredTransactions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      Nenhuma transação encontrada
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredTransactions.map((transaction) => (
+                    <TableRow key={transaction.id}>
+                      <TableCell>
+                        {new Date(transaction.due_date).toLocaleDateString("pt-BR")}
+                      </TableCell>
+                      <TableCell className="capitalize">
+                        {transaction.type}
+                      </TableCell>
+                      <TableCell>{transaction.category}</TableCell>
+                      <TableCell>{transaction.description}</TableCell>
+                      <TableCell>R$ {transaction.amount.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <button
+                          onClick={() => toggleStatus(transaction)}
+                          className={`px-2 py-1 rounded text-sm ${getStatusColor(
+                            transaction.status
+                          )}`}
+                        >
+                          {transaction.status === "pago" ? "Pago" : "Pendente"}
+                        </button>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(transaction)}
                           >
-                            {transaction.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEdit(transaction)}
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDelete(transaction.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(transaction.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       </div>

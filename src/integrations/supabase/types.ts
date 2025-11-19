@@ -62,6 +62,60 @@ export type Database = {
         }
         Relationships: []
       }
+      employees: {
+        Row: {
+          address: string | null
+          city: string | null
+          cpf: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          role: string | null
+          salary: number | null
+          state: string | null
+          updated_at: string | null
+          user_id: string
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          salary?: number | null
+          state?: string | null
+          updated_at?: string | null
+          user_id: string
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          salary?: number | null
+          state?: string | null
+          updated_at?: string | null
+          user_id?: string
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -263,6 +317,7 @@ export type Database = {
           customer_id: string | null
           description: string
           due_date: string
+          employee_id: string | null
           id: string
           installment_terms: string | null
           installments: number | null
@@ -283,6 +338,7 @@ export type Database = {
           customer_id?: string | null
           description: string
           due_date: string
+          employee_id?: string | null
           id?: string
           installment_terms?: string | null
           installments?: number | null
@@ -303,6 +359,7 @@ export type Database = {
           customer_id?: string | null
           description?: string
           due_date?: string
+          employee_id?: string | null
           id?: string
           installment_terms?: string | null
           installments?: number | null
@@ -317,6 +374,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "transactions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "transactions_project_id_fkey"
             columns: ["project_id"]
