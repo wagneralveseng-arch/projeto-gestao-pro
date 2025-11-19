@@ -31,6 +31,7 @@ import { ptBR } from "date-fns/locale";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), "yyyy-MM"));
   const [selectedYear, setSelectedYear] = useState(format(new Date(), "yyyy"));
@@ -48,8 +49,25 @@ export default function Dashboard() {
   useEffect(() => {
     if (user) {
       loadDashboardData();
+      loadProfile();
     }
   }, [user, selectedMonth, selectedYear]);
+
+  const loadProfile = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (error) throw error;
+      setProfile(data);
+    } catch (error) {
+      console.error("Erro ao carregar perfil:", error);
+    }
+  };
 
   const loadDashboardData = async () => {
     if (!user) return;
@@ -161,6 +179,35 @@ export default function Dashboard() {
   return (
     <Layout>
       <div className="space-y-6">
+        {/* User Profile Section */}
+        {profile && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                {profile.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt={profile.full_name || "User"}
+                    className="h-16 w-16 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="text-2xl font-bold text-primary">
+                      {profile.full_name?.charAt(0).toUpperCase() || "U"}
+                    </span>
+                  </div>
+                )}
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground">
+                    {profile.full_name || "Usuário"}
+                  </h2>
+                  <p className="text-muted-foreground">{profile.email}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div>
           <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">Visão geral do seu negócio</p>
