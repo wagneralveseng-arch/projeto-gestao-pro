@@ -8,8 +8,6 @@ export default function Registration() {
   return (
     <Layout>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-foreground">Cadastro</h1>
-        
         <Tabs defaultValue="customers" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="customers">Clientes</TabsTrigger>
